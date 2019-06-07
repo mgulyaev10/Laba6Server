@@ -1,12 +1,15 @@
 package main;
 
 import network.ServerThreadHandler;
+import network.mail.MailSender;
+import network.mail.MailService;
 import shared.Troll;
 
 import java.io.*;
 import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.security.MessageDigest;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -14,6 +17,8 @@ public class Main {
 
     public static final String DEFAULT_CHAR_SET = "UTF-8";
     public static Collection<Troll> objectsLinkedDeque = new ConcurrentLinkedDeque<>();
+    public static MailSender sender =
+            new MailSender(MailService.MAIL,"collectionmanagerserver@mail.ru","itsmorethana");
 
     public static boolean writeCollection(Collection<Troll> collection) {
         try (FileOutputStream writer = new FileOutputStream("Trolls.json");
