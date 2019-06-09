@@ -16,6 +16,7 @@ public class TransferPackage implements Serializable {
     private String cmdData;
     private transient Stream<Troll> data;
     private byte[] additionalData;
+    private User mUser;
 
     public TransferPackage(int id, String cmdData, Stream<Troll> data) {
         this.id = id;
@@ -36,7 +37,7 @@ public class TransferPackage implements Serializable {
             return (TransferPackage) obj;
 
         } catch (Exception e) {
-            System.out.println(e);
+            System.err.println("Подождите воссоединения с сервером.");
         }
 
         return null;
@@ -68,7 +69,6 @@ public class TransferPackage implements Serializable {
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.defaultWriteObject();
-
         if (getData() != null) {
             ArrayList<Troll> list = new ArrayList<>();
             getData().sequential().collect(Collectors.toCollection(() -> list));
@@ -80,7 +80,7 @@ public class TransferPackage implements Serializable {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         Object obj = in.readObject();
-        ArrayList<Troll> list = new ArrayList<>();
+        ArrayList<Troll> list;
         if (obj != null) {
             list = (ArrayList<Troll>) obj;
             this.data = list.stream();
@@ -90,7 +90,6 @@ public class TransferPackage implements Serializable {
     }
 
     public byte[] getBytes() {
-
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(bos);
@@ -98,11 +97,18 @@ public class TransferPackage implements Serializable {
             oos.flush();
             oos.close();
             bos.close();
-            byte[] bytes = bos.toByteArray();
             return bos.toByteArray();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
         return null;
+    }
+
+    public User getUser() {
+        return mUser;
+    }
+
+    public void setUser(User user) {
+        mUser = user;
     }
 }
