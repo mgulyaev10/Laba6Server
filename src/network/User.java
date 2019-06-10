@@ -1,11 +1,10 @@
 package network;
 
-import database.DBConst;
-import database.Queryable;
+import main.Main;
 
 import java.io.Serializable;
 
-public class User implements Serializable, Queryable {
+public class User implements Serializable {
     private String password;
     private String login;
     private String email;
@@ -49,7 +48,7 @@ public class User implements Serializable, Queryable {
 
     @Override
     public String toString() {
-        return "Пользователь " + login;
+        return "ПОльзователь " + login;
     }
 
     @Override
@@ -66,23 +65,5 @@ public class User implements Serializable, Queryable {
         return password.equals(other.password);
     }
 
-    @Override
-    public int hashCode() {
-        int prime = 5;
-        int result = 18;
-        result = result * prime + login.hashCode() * (int) Math.pow(prime,2);
-        result = result * prime + password.hashCode() * (int) Math.pow(prime,3);
-        result = result * prime + email.hashCode() * (int) Math.pow(prime,4);
-        return result;
-    }
 
-    @Override
-    public String getInsertSqlQuery() {
-        return "INSERT INTO "+DBConst.USERS_TABLE+" VALUES("+hashCode()+","+getLogin()+","+getPassword()+","+getEmail()+");";
-    }
-
-    @Override
-    public String getDeleteSqlQuery() {
-        return "DELETE FROM "+DBConst.USERS_TABLE+" WHERE "+DBConst.TABLES_ID+"="+hashCode()+";";
-    }
 }

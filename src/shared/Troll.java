@@ -1,7 +1,5 @@
 package shared;
 
-import database.DBConst;
-import database.Queryable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -13,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class Troll extends Essence implements Comparable<Troll>, Serializable, Queryable {
+public class Troll extends Essence implements Comparable<Troll>, Serializable {
     private boolean isSit;
     private boolean isSad;
     private List<Thing> thingsInHands = new ArrayList<>();
@@ -62,12 +60,6 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable, Q
         initDate = OffsetDateTime.now(ZoneId.of("Europe/Moscow"));
     }
 
-    public Troll(String name, int age,  int HP, boolean isSit, boolean isSad,OffsetDateTime time ) {
-        super(age, name, HP);
-        this.isSit = isSit;
-        this.isSad = isSad;
-        initDate = time;
-    }
     /**
      * Метод, реализующий сортировку по-умолчанию для класса shared.shared.Troll.
      * @param o сравниваемый объект.
@@ -194,6 +186,11 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable, Q
         } else {
             result = result * rnd + 22;
         }
+        if (isHungry()) {
+            result = result * rnd + 3;
+        } else {
+            result = result * rnd + 33;
+        }
         result = result * rnd + getName().hashCode();
         return result;
     }
@@ -222,14 +219,4 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable, Q
         return object;
     }
 
-    @Override
-    public String getInsertSqlQuery() {
-        return String.format("INSERT INTO "+ DBConst.TROLLS_TABLE+" VALUES (ID_TO_REPLACE, %s,%s,%s,%s,%s,%s,USER_TO_REPLACE);",
-        getName(),getAge(),getHP(),isSit,isSad,initDate);
-    }
-
-    @Override
-    public String getDeleteSqlQuery() {
-        return "DELETE FROM "+ DBConst.TROLLS_TABLE+"WHERE id="+hashCode()+" AND "+DBConst.TROLL_USER+"="+"USER_TO_REPLACE);";
-    }
 }

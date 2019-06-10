@@ -2,7 +2,6 @@ package collection;
 
 import main.Main;
 import network.TransferPackage;
-import network.User;
 import org.json.JSONException;
 import org.json.JSONObject;
 import shared.Troll;
@@ -23,7 +22,6 @@ public enum Command {
     @SuppressWarnings("unchecked")
     REMOVE((command, transferPackage) -> {
         try {
-            Main.controller.synchronizeCollection();
             StringBuilder builder = new StringBuilder();
             for (Object s : command.data.toArray()) builder.append(s.toString());
             String strData = builder.toString();
@@ -240,49 +238,6 @@ public enum Command {
         userStream.collect(Collectors.toCollection(() -> collection));
         command.setData(Stream.of(new TransferPackage(12, "Команда выполнена.", null,
                 CollectionManager.getBytesFromCollection(collection))));
-    })),
-
-    LOGIN(((command, transferPackage) -> {
-        Main.controller.synchronizeCollection();
-        String logPas = (String) command.data.findFirst().get();
-        String[] logPasArr = logPas.split("\\|");
-        User user = null;
-        if (logPasArr.length == 2) {
-            user = new User(logPasArr[0], logPasArr[1], null);
-        } else {
-            user = new User(logPasArr[0], logPasArr[1], logPasArr[2]);
-        }
-
-        boolean isNicknameExists = Main.controller.isUserExistsInDB(user);
-
-        if (!isNicknameExists && user.getEmail() == null) {
-            command.setData(Stream.of(new TransferPackage(-1, "Пользователь с таким именем не существует! Сначала зарегистрируйтесь!", null)));
-            return;
-        }
-
-        if (user.getEmail() != null && isNicknameExists){
-            command.setData(Stream.of(new TransferPackage(-1, "Пользователь с таким именем существует!", null)));
-        }
-        else
-            if (Main.controller.isUserCorrectInDB(user)){
-                command.setData(Stream.of(new TransferPackage(110, "Команда выполнена.", null,
-                        new byte[]{2})));
-            } else{
-                if (isNicknameExists){
-                    command.setData(Stream.of(new TransferPackage(-1, "Неверный пароль!", null)));
-                } else{
-                    Main.controller.addUserToDb(user);
-                    command.setData(Stream.of(new TransferPackage(110, "Команда выполнена.", null,
-                            new byte[]{1})));
-                    Main.sender.send("Регистрация прошла успешно! COOLLAB",
-                            "Спасибо за то, что решили воспользоваться нашим сервисом!\n" +
-                                    "Данные для входа\n" +
-                                    "Логин: " + user.getLogin() + "\n" +
-                                    "Пароль: " + user.getPassword() + "\n" +
-                                    "Будьте осторожны! Не передавайте эти данные третьим лицам!",
-                            user.getEmail());
-                }
-            }
     }));
 
     /**

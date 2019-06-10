@@ -2,7 +2,6 @@ package network;
 
 import collection.CollectionManager;
 import collection.Command;
-import database.Pair;
 import filesystem.EmptyFileException;
 import main.Main;
 import shared.Troll;
@@ -17,12 +16,12 @@ public class ServerThreadHandler implements Runnable {
     private static Command previousCmd = null;
     private Client client;
     private DatagramSocket socket;
-    private byte[] recievedata;
+    private byte[] receiveData;
     private byte[] sendData;
     private int port;
 
     public ServerThreadHandler(byte[] data, int port) {
-        recievedata = data;
+        receiveData = data;
         this.port = port;
     }
 
@@ -40,40 +39,38 @@ public class ServerThreadHandler implements Runnable {
             System.err.println("Ошибка при создании потока для получения и отправки сообщения.");
         }
 
-        read(recievedata);
+        read(receiveData);
         sendData = new byte[65536];
         write(client);
     }
 
-    private void read(byte[] recievedata) {
+    private void read(byte[] receiveData) {
         try {
-            TransferPackage recieved = TransferPackage.restoreObject(new ByteArrayInputStream(recievedata));
+            TransferPackage received = TransferPackage.restoreObject(new ByteArrayInputStream(receiveData));
 
-            if (recieved.getId() == TransferCommandID.CheckingConnectionTP.getId()) {
-                client.setPackage(recieved);
+            if (received.getId() == TransferCommandID.CheckingConnectionTP.getId()) {
+                client.setPackage(received);
                 return;
             }
 
-            if (recieved.getAdditionalData() != null && recieved.getCmdData().equals("load"))
-                recieved.setData(CollectionManager.getCollectionFromJson(new String(recieved.getAdditionalData(), Main.DEFAULT_CHAR_SET)).stream());
+            if (received.getAdditionalData() != null && received.getCmdData().equals("load"))
+                received.setData(CollectionManager.getCollectionFromJson(new String(received.getAdditionalData(), Main.DEFAULT_CHAR_SET)).stream());
 
-            User user = recieved.getUser();
-
-            if (user!=null && !recieved.getCmdData().equals("load")){
-                Stream<Pair<Troll,String>> userStream = Main.getobjectsLinkedDeque().stream().filter(p->p.getValue().equals(user.getLogin()));
-                if (userStream.count()==0){
+            if (received.getCmdData().trim().equals("help")) {
+                Command command = Command.parseCmd(received.getCmdData().trim());
+                command.setAddress(client.getAddress());
+                client.setPackage(command.start(command, received));
+                return;
+            }
+            if (!received.getCmdData().equals("load")) {
+                Stream<Troll> userStream = Main.getobjectsLinkedDeque().stream();
+                if (userStream.count() == 0) {
                     client.setPackage(new TransferPackage(-1, "Прежде чем работать с вашей коллекцией, загрузите её с помощью комманды 'load' ", null));
                     return;
                 }
             }
-            if (recieved.getCmdData().trim().equals("help")) {
-                Command command = Command.parseCmd(recieved.getCmdData().trim());
-                command.setAddress(client.getAddress());
-                client.setPackage(command.start(command, recieved));
-                return;
-            }
 
-            Command command = Command.parseCmd(recieved.getCmdData().trim());
+            Command command = Command.parseCmd(received.getCmdData().trim());
             if (previousCmd != null)
                 System.out.println("Previous CMD : " + previousCmd.toString());
             if (command == null)
@@ -84,7 +81,7 @@ public class ServerThreadHandler implements Runnable {
                     client.setPackage(new TransferPackage(-1, "Неверная команда!", null));
                 } else {
                     command.setAddress(client.getAddress());
-                    client.setPackage(command.start(command, recieved));
+                    client.setPackage(command.start(command, received));
                     System.out.println("Collection size: " + Main.getobjectsLinkedDeque().size());
                 }
             }
