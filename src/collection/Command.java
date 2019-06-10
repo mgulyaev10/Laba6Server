@@ -1,5 +1,6 @@
 package collection;
 
+import database.Pair;
 import main.Main;
 import network.TransferPackage;
 import org.json.JSONException;
@@ -8,6 +9,7 @@ import shared.Troll;
 
 import java.io.*;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,6 +24,8 @@ public enum Command {
     @SuppressWarnings("unchecked")
     REMOVE((command, transferPackage) -> {
         try {
+
+            Main.controller.synchronizeCollection();
             StringBuilder builder = new StringBuilder();
             for (Object s : command.data.toArray()) builder.append(s.toString());
             String strData = builder.toString();
@@ -33,18 +37,23 @@ public enum Command {
             JSONObject jsonObject = new JSONObject(strData);
             Troll troll = new Troll(jsonObject);
 
+            User user = transferPackage.getUser();
             command.setData(null);
-            Stream<Troll> stream = command.getObjectsArrayDeque().stream().filter(p -> !p.equals(troll));
-            ArrayDeque<Troll> trolls = new ArrayDeque<>();
-            stream.sequential().collect(Collectors.toCollection(() -> trolls));
 
+            Stream<Pair<Troll, String>> userStream = command.getObjectsArrayDeque().stream().filter(p -> p.getValue().equals(user.getLogin()) && !p.getKey().equals(troll));
+            Stream<Pair<Troll, String>> otherStream = command.getObjectsArrayDeque().stream().filter(p -> !p.getValue().equals(user.getLogin()));
+            Collection<Pair<Troll, String>> userTrolls = new ArrayDeque<>();
+            Collection<Pair<Troll, String>> otherTrolls = new ArrayDeque<>();
+
+            userStream.collect(Collectors.toCollection(() -> userTrolls));
+            otherStream.collect(Collectors.toCollection(() -> otherTrolls));
+            otherTrolls.addAll(userTrolls);
             command.getObjectsArrayDeque().clear();
-            command.getObjectsArrayDeque().addAll(trolls);
+            command.getObjectsArrayDeque().addAll(otherTrolls);
 
-            Main.writeCollection(Main.getobjectsLinkedDeque());
+            Main.writeCollection(Main.getObjectsLinkedDeque());
+            Main.controller.reloadCollection();
 
-            Collection<Troll> trollsCollection = new ArrayDeque<>();
-            trolls.forEach(p -> trollsCollection.add(p));
             command.setData(Stream.of(new TransferPackage(1, "Команда выполнена.", null)));
             System.out.println("Команда выполнена.");
         } catch (JSONException e) {
@@ -55,6 +64,7 @@ public enum Command {
     }),
 
     REMOVE_LOWER((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
         StringBuilder builder = new StringBuilder();
         for (Object s : command.data.toArray()) builder.append(s.toString());
         String strData = builder.toString();
@@ -65,54 +75,65 @@ public enum Command {
         }
         JSONObject jsonObject = new JSONObject(strData);
         Troll troll = new Troll(jsonObject);
-
         command.setData(null);
-        Stream<Troll> stream = command.getObjectsArrayDeque().stream().filter(p -> p.compareTo(troll) >= 0);
-
-        ArrayDeque<Troll> trolls = new ArrayDeque<>();
-
-        stream.sequential().collect(Collectors.toCollection(() -> trolls));
-
+        User user = transferPackage.getUser();
+        Stream<Pair<Troll, String>> stream = command.getObjectsArrayDeque().stream().filter((p) -> p.getKey().compareTo(troll) >= 0 && p.getValue().equals(user.getLogin()));
+        Collection<Pair<Troll, String>> trolls = new ArrayDeque<>();
+        stream.collect(Collectors.toCollection(() -> trolls));
         command.getObjectsArrayDeque().clear();
         command.getObjectsArrayDeque().addAll(trolls);
-
-        Main.writeCollection(Main.getobjectsLinkedDeque());
-
-        Collection<Troll> trollsCollection = new ArrayDeque<>();
-        trolls.forEach(p -> trollsCollection.add(p));
+        Main.writeCollection(Main.getObjectsLinkedDeque());
+        Main.controller.reloadCollection();
         command.setData(Stream.of(new TransferPackage(10, "Команда выполнена.", null)));
         System.out.println("Команда выполнена.");
     }),
 
     SHOW((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
         command.setData(null);
-        List<Troll> trolls = command.getObjectsArrayDeque().stream().collect(Collectors.toList());
-        final String[] output = {""};
-        trolls.forEach(p -> output[0] += p.toString() + "\t");
-        command.setData(Stream.of(new TransferPackage(2, "Команда выполнена.", null, output[0].getBytes(Main.DEFAULT_CHAR_SET))));
+        User user = transferPackage.getUser();
+        List<Pair<Troll,String>> trolls = command.getObjectsArrayDeque().stream().filter((p) -> p.getValue().equals(user.getLogin())).collect(Collectors.toList());
+        String[] output = new String[]{""};
+        trolls.forEach(p->output[0]+=p.getKey().toString()+"\t");
+        command.setData(Stream.of(new TransferPackage(2, "Команда выполнена.", null, output[0].getBytes(StandardCharsets.UTF_8))));
         System.out.println("Команда выполнена.");
     }),
 
     CLEAR((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
         command.setData(null);
+        User user = transferPackage.getUser();
+        Stream<Pair<Troll, String>> stream = command.getObjectsArrayDeque().stream().filter((p) -> !p.getValue().equals(user.getLogin()));
+        Collection<Pair<Troll, String>> trolls = new ArrayDeque<>();
+        stream.collect(Collectors.toCollection(() -> trolls));
         command.getObjectsArrayDeque().clear();
-        command.setData(Stream.of(new TransferPackage(3, "Команда выполнена.", null)));
+        command.getObjectsArrayDeque().addAll(trolls);
+        Main.writeCollection(Main.getObjectsLinkedDeque());
+        Main.controller.reloadCollection();
+        command.setData(Stream.of(new TransferPackage(3, "Команда выполнена.", (Stream)null)));
     }),
 
     LOAD((command, transferPackage) -> {
-        Stream<Troll> concatStream = Stream.concat(command.getObjectsArrayDeque().stream(), transferPackage.getData());
-        ArrayDeque<Troll> trolls = concatStream.distinct().collect(Collectors.toCollection(ArrayDeque::new));
-        command.getObjectsArrayDeque().clear();
-        command.getObjectsArrayDeque().addAll(trolls);
-        command.setData(Stream.of(new TransferPackage(4, "Команда выполнена.", null, "Load collection to server".getBytes(Main.DEFAULT_CHAR_SET))));
-        Main.writeCollection(Main.getobjectsLinkedDeque());
+        Main.controller.synchronizeCollection();
+        User user = transferPackage.getUser();
+        Stream<Pair<Troll,String>> concatStream = Stream.concat(command.getObjectsArrayDeque().stream(),transferPackage.getData().map(p->new Pair<>(p,user.getLogin())));
+        ArrayDeque<Pair<Troll,String>> collection = new ArrayDeque<>(concatStream.collect(Collectors.toCollection(ArrayDeque::new)));
+        command.getObjectsArrayDeque().addAll(collection);
+        Main.controller.addTrollsCollectionToDB(collection.stream().map(Pair::getKey).collect(Collectors.toCollection(ArrayDeque::new)), user);
+        Main.writeCollection(Main.getObjectsLinkedDeque());
+        Main.controller.reloadCollection();
+        command.setData(Stream.of(new TransferPackage(4, "Команда выполнена.", (Stream)null, "Load collection to server".getBytes("UTF-8"))));
         System.out.println("Команда выполнена.");
     }),
 
     INFO((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
         Collection<Troll> collection = new ArrayDeque<>();
-        Stream<Troll> stream = command.getObjectsArrayDeque().stream();
-        stream.collect(Collectors.toCollection(() -> collection));
+        User user = transferPackage.getUser();
+        Stream<Pair<Troll,String>> userStream = command.getObjectsArrayDeque().stream().filter(p->p.getValue().equals(user.getLogin()));
+
+        userStream.map(Pair::getKey).collect(Collectors.toCollection(()->collection));
+
         try (ByteArrayOutputStream byteObject = new ByteArrayOutputStream();
              ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteObject)) {
             objectOutputStream.writeObject(collection);
@@ -147,11 +168,14 @@ public enum Command {
 
     @SuppressWarnings("unchecked")
     SET_PATH_IMPORT((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
+        User user = transferPackage.getUser();
         try (ByteArrayInputStream bis = new ByteArrayInputStream(transferPackage.getAdditionalData());
              ObjectInputStream dis = new ObjectInputStream(bis)) {
             Collection<Troll> mainCollection = (Collection<Troll>) dis.readObject();
-            ArrayDeque<Troll> collection = new ArrayDeque<>();
-            mainCollection.forEach(p -> collection.add(p));
+            Collection<Pair<Troll,String>> collection = new ArrayDeque<>();
+            mainCollection.forEach(p->collection.add(new Pair<>(p,user.getLogin())));
+            collection.forEach(p->Main.controller.addTrollToDb(p.getKey(),user));
             command.getObjectsArrayDeque().addAll(collection);
             command.setData(Stream.of(new TransferPackage(601, "Команда выполнена.", null)));
         } catch (IOException | ClassNotFoundException e) {
@@ -161,6 +185,7 @@ public enum Command {
 
     ADD((command, transferPackage) -> {
         try {
+            Main.controller.synchronizeCollection();
             StringBuilder builder = new StringBuilder();
             for (Object s : command.data.toArray()) builder.append(s.toString());
             String strData = builder.toString();
@@ -173,20 +198,25 @@ public enum Command {
             Troll Troll = new Troll(jsonObject);
 
             command.setData(null);
+            User user = transferPackage.getUser();
 
-            Stream<Troll> mainStream = command.getObjectsArrayDeque().stream();
-            Stream<Troll> stream = Stream.concat(mainStream, Stream.of(Troll));
+            Stream<Pair<Troll, String>> userStream = command.getObjectsArrayDeque().stream().filter(p -> p.getValue().equals(user.getLogin()));
+            Stream<Pair<Troll, String>> otherStream= command.getObjectsArrayDeque().stream().filter(p -> !p.getValue().equals(user.getLogin()));
+            Stream<Pair<Troll, String>> stream = Stream.concat(userStream, Stream.of(new Pair<>(Troll, user.getLogin())));
 
-            ArrayDeque<Troll> trolls = new ArrayDeque<>();
-
-            stream.sequential().collect(Collectors.toCollection(() -> trolls));
+            HashSet<Pair<Troll, String>> userTrolls = new HashSet<>();
+            HashSet<Pair<Troll, String>> otherTrolls = new HashSet<>();
+            stream.sequential().collect(Collectors.toCollection(() -> userTrolls));
+            otherStream.sequential().collect(Collectors.toCollection(()->otherTrolls));
+            userTrolls.addAll(otherTrolls);
             command.getObjectsArrayDeque().clear();
-            command.getObjectsArrayDeque().addAll(trolls);
+            command.getObjectsArrayDeque().addAll(userTrolls);
 
-            Main.writeCollection(Main.getobjectsLinkedDeque());
-
+            Main.writeCollection(Main.getObjectsLinkedDeque());
+            Main.controller.reloadCollection();
             command.setData(Stream.of(new TransferPackage(7, "Команда выполнена.", null)));
             System.out.println("Команда выполнена.");
+
         } catch (JSONException e) {
             command.setData(Stream.of(new TransferPackage(-1, "Команда не выполнена.", null,
                     "Аргумент команды неверный!".getBytes(Main.DEFAULT_CHAR_SET))));
@@ -233,9 +263,12 @@ public enum Command {
     })),
 
     SAVE(((command, transferPackage) -> {
-        Collection<Troll> collection = new ArrayDeque<>();
-        Stream<Troll> userStream = command.getObjectsArrayDeque().stream();
-        userStream.collect(Collectors.toCollection(() -> collection));
+        Main.controller.synchronizeCollection();
+        Collection<Troll> collection = new ArrayDeque<Troll>();
+        User user = transferPackage.getUser();
+
+        Stream<Pair<Troll,String>> userStream = command.getObjectsArrayDeque().stream().filter(p->p.getValue().equals(user.getLogin()));
+        userStream.map(Pair::getKey).collect(Collectors.toCollection(()->collection));
         command.setData(Stream.of(new TransferPackage(12, "Команда выполнена.", null,
                 CollectionManager.getBytesFromCollection(collection))));
     }));
@@ -251,14 +284,6 @@ public enum Command {
 
     private SocketAddress address;
 
-    public SocketAddress getAddress() {
-        return address;
-    }
-
-    public void setAddress(SocketAddress address) {
-        this.address = address;
-    }
-
     Command(Startable cmd) {
         this.cmd = cmd;
     }
@@ -268,6 +293,7 @@ public enum Command {
         String jsonRegex = "\\{\"isSad\":(true|false),\".+\":\".+\",\".+\":(\\d+),\"things\":\\[(\\{\"condition\":\"(Solid|Gaseous|Liquid)\",\"name\":\".+\",\"weight\":(\\d+)})*],\"isSit\":(true|false),\"age\":(\\d+)}";
         String dataCommandRegex = "(remove|import|add|remove_lower|change_def_file_path) \\{.+}";
         String nodataCommandRegex = "show|load|info|exit|help|save|SET_PATH_IMPORT|clear";
+        String loginRegex = "login \\{.+} \\{.+}( \\{.+})?";
 
         if (jsonInput.matches(dataCommandRegex)) {
             String cmd = findMatches("(remove_lower|remove|import|add)", jsonInput).get(0).toUpperCase();
@@ -287,6 +313,21 @@ public enum Command {
         } else if (jsonInput.matches(nodataCommandRegex)) {
             Command command = Command.valueOf(jsonInput.toUpperCase());
             return command;
+        }else if(jsonInput.matches(loginRegex)){
+            String[] args = jsonInput.split(" ");
+            Command command = Command.LOGIN;
+            if(args.length == 3)
+                command.setData(Stream.of(
+                        args[1].substring(1, args[1].length() - 1) + "|" +
+                                args[2].substring(1, args[2].length() - 1)
+                ));
+            else
+                command.setData(Stream.of(
+                        args[1].substring(1, args[1].length() - 1) + "|" +
+                                args[2].substring(1, args[2].length() - 1) + "|" +
+                                args[3].substring(1, args[3].length() - 1)
+                ));
+            return command;
         } else {
             return null;
         }
@@ -302,12 +343,20 @@ public enum Command {
         return collection;
     }
 
+    public SocketAddress getAddress() {
+        return address;
+    }
+
+    public void setAddress(SocketAddress address) {
+        this.address = address;
+    }
+
     private void setData(Stream data) {
         this.data = data;
     }
 
-    public Collection<Troll> getObjectsArrayDeque() {
-        return Main.getobjectsLinkedDeque();
+    public Collection<Pair<Troll, String>> getObjectsArrayDeque() {
+        return Main.getObjectsLinkedDeque();
     }
 
     @SuppressWarnings("unchecked")

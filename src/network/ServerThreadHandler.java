@@ -9,6 +9,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
+import java.sql.SQLException;
 import java.util.stream.Stream;
 
 public class ServerThreadHandler implements Runnable {
@@ -89,6 +90,7 @@ public class ServerThreadHandler implements Runnable {
             if (client.getAddress() != null) {
                 previousCmd = command;
             }
+
         } catch (IOException e) {
             System.err.println("Ошибка при получении!");
         } catch (IllegalArgumentException e) {
@@ -109,6 +111,7 @@ public class ServerThreadHandler implements Runnable {
             client.setPackage(new TransferPackage(-1, "Команда не выполнена. Попробуйте ещё раз." , null));
             return;
         }
+
     }
 
     private void write(Client client) {

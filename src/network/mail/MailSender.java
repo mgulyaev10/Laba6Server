@@ -5,11 +5,15 @@ import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-public class MailSender {
+public class MailSender implements Runnable {
 
     private MailService service;
     private String login;
     private String password;
+
+    private String theme;
+    private String message;
+    private String toEmail;
 
 
     public MailSender(MailService service, String login, String password){
@@ -20,6 +24,14 @@ public class MailSender {
 
 
     public void send(String theme, String message, String toEmail){
+       this.theme = theme;
+       this.message = message;
+       this.toEmail = toEmail;
+       new Thread(this).start();
+    }
+
+    @Override
+    public void run() {
         System.out.println("Sending email!");
         java.util.Properties props = new java.util.Properties();
         props.put("mail.smtp.host", service.getHost());
@@ -37,14 +49,12 @@ public class MailSender {
         });
 
 // Construct the message
-        String to = toEmail;
         String from = login;
-        String subject = theme;
         Message msg = new MimeMessage(session);
         try {
             msg.setFrom(new InternetAddress(from));
-            msg.setRecipient(Message.RecipientType.TO, new InternetAddress(to));
-            msg.setSubject(subject);
+            msg.setRecipient(Message.RecipientType.TO, new InternetAddress(toEmail));
+            msg.setSubject(theme);
             msg.setText(message);
 
 // Send the message.

@@ -6,7 +6,6 @@ import org.json.JSONObject;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +18,8 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
 
     /**
      * Конструктор для класса shared.shared.Troll, если HP тролля неизвестно.
-     * @param age возраст тролля
+     *
+     * @param age  возраст тролля
      * @param name имя тролля
      */
     public Troll(int age, String name) {
@@ -31,9 +31,10 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
 
     /**
      * Конструктор для класса shared.shared.Troll, если HP тролля известно.
-     * @param age возраст тролля
+     *
+     * @param age  возраст тролля
      * @param name имя тролля
-     * @param HP HP тролля
+     * @param HP   HP тролля
      */
     public Troll(int age, String name, int HP) {
         super(age, name, HP);
@@ -44,6 +45,7 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
 
     /**
      * Конструктор для класса shared.shared.Troll, объект задан в формате JSON
+     *
      * @param json объект класса shared.shared.Troll, заданный в формате JSON.
      */
     public Troll(JSONObject json) {
@@ -60,8 +62,16 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
         initDate = OffsetDateTime.now(ZoneId.of("Europe/Moscow"));
     }
 
+    public Troll(String name, int age, int HP, boolean isSit, boolean isSad, OffsetDateTime time) {
+        super(age, name, HP);
+        this.isSit = isSit;
+        this.isSad = isSad;
+        initDate = time;
+    }
+
     /**
      * Метод, реализующий сортировку по-умолчанию для класса shared.shared.Troll.
+     *
      * @param o сравниваемый объект.
      * @return положительное число, если объект this > o , отрицательное, если this<o , 0, если this = o.
      */
@@ -85,17 +95,17 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
             return 0;
     }
 
+    public boolean isSit() {
+        return isSit;
+    }
 
     public void setSit(boolean b) {
         isSit = b;
     }
 
-    public boolean isSit(){
-        return isSit;
-    }
-
     /**
      * Метод, позволяющий пополнить HP тролля с помощью объекта shared.shared.Sandwich.
+     *
      * @param s объект класса shared.shared.Sandwich, который ест тролль.
      */
     public void eat(Sandwich s) {
@@ -111,12 +121,12 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
         }
     }
 
-    public void setSad(boolean b) {
-        isSad = b;
-    }
-
     public boolean isSad() {
         return isSad;
+    }
+
+    public void setSad(boolean b) {
+        isSad = b;
     }
 
     public OffsetDateTime getInitDate() {
@@ -125,20 +135,22 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
 
     /**
      * Метод, позволяющий произнести фразу троллю.
+     *
      * @param speech фраза, сказанная троллю
      * @return true, если тролль сказал фразу, false, если тролль не может говорить.
      */
-    public boolean say(String speech){
+    public boolean say(String speech) {
         if (isAbleToSpeak()) {
             System.out.println(this.getName() + " говорит: \"" + speech + "\"");
             return true;
-        } else{
+        } else {
             return false;
         }
     }
 
     /**
      * Метод, позволяющий добавить вещь троллю.
+     *
      * @param t объект класса shared.shared.Thing, которую берёт тролль.
      */
     public void addThing(Thing t) {
@@ -166,9 +178,7 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
             return false;
         if (temp.getHP() != this.getHP())
             return false;
-        if (temp.thingsInHands.size() != this.thingsInHands.size())
-            return false;
-        return true;
+        return temp.thingsInHands.size() == this.thingsInHands.size();
     }
 
     @Override
@@ -197,15 +207,16 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
 
     @Override
     public String toString() {
-        return "Troll " + getName() + ". Возраст: " + Integer.toString(getAge()) + ". HP: " + Integer.toString(getHP())
-                + ". IsHungry: " + Boolean.toString(isHungry()) +
-                ". IsSit: " + Boolean.toString(isSit) + ". IsSad: " + Boolean.toString(isSad) + ". Things: "
-                + thingsInHands;
+        return "Troll " + getName() + ". Возраст: " + getAge() + ". HP: " + getHP()
+                + ". IsHungry: " + isHungry() +
+                ". IsSit: " + isSit + ". IsSad: " + isSad + ". Things: "
+                + thingsInHands + " . Дата создания: "+initDate.toString();
     }
 
 
     /**
      * Метод, позволяющий получить объект shared.shared.Troll, записанный в формате JSON.
+     *
      * @return объект класса JSONObject, описывающий объект shared.shared.Troll.
      */
     public JSONObject getJSON() {
@@ -219,4 +230,14 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
         return object;
     }
 
+    @Override
+    public String getInsertSqlQuery() {
+        return String.format("INSERT INTO " + DBConst.TROLLS_TABLE + " VALUES (ID_TO_REPLACE, '%s',%s,%s,%s,%s,'%s','USER_TO_REPLACE');",
+                getName(), getAge(), getHP(), isSit, isSad, initDate);
+    }
+
+    @Override
+    public String getDeleteSqlQuery() {
+        return "DELETE FROM " + DBConst.TROLLS_TABLE + "WHERE id=" + hashCode() + " AND " + DBConst.TROLL_USER + "=" + "'USER_TO_REPLACE');";
+    }
 }
