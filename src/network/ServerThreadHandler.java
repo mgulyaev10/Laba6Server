@@ -9,7 +9,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
-import java.sql.SQLException;
 import java.util.stream.Stream;
 
 public class ServerThreadHandler implements Runnable {
@@ -108,7 +107,7 @@ public class ServerThreadHandler implements Runnable {
                 System.err.println(e1.getMessage());
             }
         } catch (NullPointerException e) {
-            client.setPackage(new TransferPackage(-1, "Команда не выполнена. Попробуйте ещё раз." , null));
+            client.setPackage(new TransferPackage(-1, "Команда не выполнена. Попробуйте ещё раз.\n" , null));
             return;
         }
 

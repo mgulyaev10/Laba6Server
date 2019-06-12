@@ -2,18 +2,14 @@ package database;
 
 import main.Main;
 import network.User;
-import org.postgresql.core.SqlCommand;
 import shared.Thing;
 import shared.Troll;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -26,7 +22,7 @@ public class DBController {
     }
 
     public void addTrollToDb(Troll troll, User user) {
-        connector.execSQLQuery(troll.getInsertSqlQuery().replace("USER_TO_REPLACE", user.getLogin()).replace("ID_TO_REPLACE", String.valueOf(troll.hashCode())));
+        connector.execSQLQuery(troll.getInsertSqlQuery().replace("USER_TO_REPLACE", user.getLogin()).replace("ID_TO_REPLACE", String.valueOf(troll.hashCode()+user.hashCode())));
         troll.getThingsInHands().forEach(t -> connector.execSQLQuery(t.getInsertSqlQuery().replace("ID_TO_REPLACE", String.valueOf(t.hashCode())).replace("TROLL_ID_TO_REPLACE", String.valueOf(troll.hashCode()))));
     }
 
@@ -154,5 +150,12 @@ public class DBController {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public String getUserEmailFromDb(String login) throws SQLException{
+        Pair<PreparedStatement, ResultSet> pair = connector.execSQLQuery("SELECT * FROM users WHERE "+DBConst.USERS_LOGIN+" = '"+login+"';");
+        ResultSet userSet = pair.getValue();
+        userSet.next();
+        return userSet.getString(DBConst.USERS_EMAIL);
     }
 }

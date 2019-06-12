@@ -3,6 +3,7 @@ package network;
 import main.Main;
 
 import java.io.Serializable;
+import java.sql.SQLException;
 
 public class User implements Serializable {
     private String password;

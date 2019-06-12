@@ -88,14 +88,25 @@ public enum Command {
         System.out.println("Команда выполнена.");
     }),
 
-    SHOW((command, transferPackage) -> {
+    SHOW_MY((command, transferPackage) -> {
         Main.controller.synchronizeCollection();
         command.setData(null);
         User user = transferPackage.getUser();
         List<Pair<Troll,String>> trolls = command.getObjectsArrayDeque().stream().filter((p) -> p.getValue().equals(user.getLogin())).collect(Collectors.toList());
         String[] output = new String[]{""};
-        trolls.forEach(p->output[0]+=p.getKey().toString()+"\t");
+        trolls.forEach(p->output[0]+=p.getKey().toString()+"; Создан: "+p.getValue()+"\n");
         command.setData(Stream.of(new TransferPackage(2, "Команда выполнена.", null, output[0].getBytes(StandardCharsets.UTF_8))));
+        System.out.println("Команда выполнена.");
+    }),
+
+    SHOW_ALL((command, transferPackage) -> {
+        Main.controller.synchronizeCollection();
+        command.setData(null);
+        User user = transferPackage.getUser();
+        List<Pair<Troll,String>> trolls = command.getObjectsArrayDeque().stream().collect(Collectors.toList());
+        String[] output = new String[]{""};
+        trolls.forEach(p->output[0]+=p.getKey().toString()+"; Создан: "+p.getValue()+"\n");
+        command.setData(Stream.of(new TransferPackage(14, "Команда выполнена.", null, output[0].getBytes(StandardCharsets.UTF_8))));
         System.out.println("Команда выполнена.");
     }),
 
@@ -110,19 +121,19 @@ public enum Command {
         command.getObjectsArrayDeque().addAll(trolls);
         Main.writeCollection(Main.getObjectsLinkedDeque());
         Main.controller.reloadCollection();
-        command.setData(Stream.of(new TransferPackage(3, "Команда выполнена.", (Stream)null)));
+        command.setData(Stream.of(new TransferPackage(3, "Команда выполнена.",null)));
     }),
 
     LOAD((command, transferPackage) -> {
         Main.controller.synchronizeCollection();
         User user = transferPackage.getUser();
-        Stream<Pair<Troll,String>> concatStream = Stream.concat(command.getObjectsArrayDeque().stream(),transferPackage.getData().map(p->new Pair<>(p,user.getLogin())));
-        ArrayDeque<Pair<Troll,String>> collection = new ArrayDeque<>(concatStream.collect(Collectors.toCollection(ArrayDeque::new)));
+        Stream<Pair<Troll,String>> stream = transferPackage.getData().map(p->new Pair<>(p,user.getLogin()));
+        ArrayDeque<Pair<Troll,String>> collection = new ArrayDeque<>(stream.collect(Collectors.toCollection(ArrayDeque::new)));
         command.getObjectsArrayDeque().addAll(collection);
         Main.controller.addTrollsCollectionToDB(collection.stream().map(Pair::getKey).collect(Collectors.toCollection(ArrayDeque::new)), user);
         Main.writeCollection(Main.getObjectsLinkedDeque());
         Main.controller.reloadCollection();
-        command.setData(Stream.of(new TransferPackage(4, "Команда выполнена.", (Stream)null, "Load collection to server".getBytes("UTF-8"))));
+        command.setData(Stream.of(new TransferPackage(4, "Команда выполнена.", null, "Load collection to server".getBytes("UTF-8"))));
         System.out.println("Команда выполнена.");
     }),
 
@@ -238,7 +249,8 @@ public enum Command {
                                 "(тип, дата инициализации, количество элементов и т.д.)\n" +
                                 "\"remove_lower {element}\": удалить из коллекции все элементы, меньшие, чем заданный\n" +
                                 "\"add {element}\": добавить новый элемент в коллекцию\n" +
-                                "\"show\": вывести в стандартный поток вывода все элементы коллекции в строковом представлении\n" +
+                                "\"show_my\": вывести в стандартный поток вывода все элементы вашей коллекции в строковом представлении\n" +
+                                "\"show_my\": вывести в стандартный поток вывода все элементы общей коллекции в строковом представлении\n" +
                                 "\"help\": получить информацию о доступных командах\n" +
                                 "\"exit\": выйти из программы\n" +
                                 "\"import {path}\": добавить к коллекции объекты из файла\n" +
@@ -292,7 +304,7 @@ public enum Command {
 
         String jsonRegex = "\\{\"isSad\":(true|false),\".+\":\".+\",\".+\":(\\d+),\"things\":\\[(\\{\"condition\":\"(Solid|Gaseous|Liquid)\",\"name\":\".+\",\"weight\":(\\d+)})*],\"isSit\":(true|false),\"age\":(\\d+)}";
         String dataCommandRegex = "(remove|import|add|remove_lower|change_def_file_path) \\{.+}";
-        String nodataCommandRegex = "show|load|info|exit|help|save|SET_PATH_IMPORT|clear";
+        String nodataCommandRegex = "show_my|load|info|exit|help|save|SET_PATH_IMPORT|clear|show_all";
         String loginRegex = "login \\{.+} \\{.+}( \\{.+})?";
 
         if (jsonInput.matches(dataCommandRegex)) {

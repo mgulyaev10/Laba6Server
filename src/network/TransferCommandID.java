@@ -6,7 +6,7 @@ package network;
 public enum TransferCommandID {
 
     REMOVE(1),
-    SHOW(2),
+    SHOW_MY(2),
     CLEAR(3),
     LOAD(4),
     INFO(5),
@@ -15,6 +15,7 @@ public enum TransferCommandID {
     EXIT(9),
     REMOVE_LOWER(10),
     HELP(11),
+    SHOW_ALL(14),
     EMPTY_TP(666),
     OK(0),
     ERROR(-1),
