@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.Serializable;
+import java.sql.ResultSet;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -240,4 +241,6 @@ public class Troll extends Essence implements Comparable<Troll>, Serializable {
     public String getDeleteSqlQuery() {
         return "DELETE FROM " + DBConst.TROLLS_TABLE + "WHERE id=" + hashCode() + " AND " + DBConst.TROLL_USER + "=" + "'USER_TO_REPLACE');";
     }
+
+
 }
